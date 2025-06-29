@@ -35,7 +35,6 @@ void FileRAII::writeLine(const std::string& line) {
     }
 }
 
-// Реализации перемещения
 FileRAII::FileRAII(FileRAII&& other) noexcept
     : file_(std::move(other.file_)), filename_(std::move(other.filename_)) {}
 
