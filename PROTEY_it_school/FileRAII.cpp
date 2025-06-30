@@ -34,7 +34,6 @@ void FileRAII::writeLine(const std::string& line) {
         throw std::runtime_error("Error writing to file");
     }
 }
-
 FileRAII::FileRAII(FileRAII&& other) noexcept
     : file_(std::move(other.file_)), filename_(std::move(other.filename_)) {}
 
