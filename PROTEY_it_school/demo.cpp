@@ -19,7 +19,7 @@ int main() {
                 std::string new_line;
                 std::getline(std::cin, new_line);
 
-                FileRAII writer(path, std::ios::out);
+                FileRAII writer(path, std::ios::out | std::ios::app);
                 writer.writeLine(new_line);
             }
             
