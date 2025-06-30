@@ -9,11 +9,13 @@ public:
     ~FileRAII();
     std::string readLine();
     void writeLine(const std::string& line);
+
     FileRAII(const FileRAII&) = delete;
     FileRAII& operator=(const FileRAII&) = delete;
 
     FileRAII(FileRAII&&) noexcept;
     FileRAII& operator=(FileRAII&&) noexcept;
+
 private:
     std::fstream file_;
     std::string filename_;
