@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 class FileRAII {
-public: 
+public:
     FileRAII(const std::string& filename, std::ios_base::openmode mode);
     ~FileRAII();
     std::string readLine();
