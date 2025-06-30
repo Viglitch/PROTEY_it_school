@@ -9,34 +9,35 @@ int main() {
             std::string path;
             std::getline(std::cin, path);
 
-            std::cout << "Please enter a line you would like to add to your file" <<std::endl;
-            std::string line;
-            std::getline(std::cin, line);
+            std::cout << "Enter 'write' if you would likw to add line to file and 'read' if you would like to read the whole file" << std::endl;
+            std::string command;
+            std::getline(std::cin, command);
 
-            FileRAII writer(path, std::ios::out);
-            writer.writeLine(line);
+
+            if (command == "write") {
+                std::cout << "Please enter a line you would like to add to your file" << std::endl;
+                std::string new_line;
+                std::getline(std::cin, new_line);
+
+                FileRAII writer(path, std::ios::out);
+                writer.writeLine(new_line);
+            }
             
-            FileRAII reader(path, std::ios::in);
-           
-            while (true) {
-                try {
-                    std::string line = reader.readLine();
-                    std::cout << "Read: " << line << std::endl;
-                }
-                catch (const std::runtime_error& e) {
-                    if (std::string(e.what()) == "End of file reached") {
-                        break;
+            if (command == "read") {
+                FileRAII reader(path, std::ios::in);
+                while (true) {
+                    try {
+                        std::string line = reader.readLine();
+                        std::cout << "Read: " << line << std::endl;
                     }
-                    throw;
+                    catch (const std::runtime_error& e) {
+                        if (std::string(e.what()) == "End of file reached") {
+                            break;
+                        }
+                        throw;
+                    }
                 }
             }
-        }
-
-        try {
-            FileRAII fail_reader("nonexistent.txt", std::ios::in);
-        }
-        catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
         }
 
     }
