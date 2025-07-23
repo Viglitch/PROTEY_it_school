@@ -1,8 +1,33 @@
 #include <iostream>
 #include <thread>
+#include <unordered_map>
+#include <unordered_set>
+#include <string>
 #include <cstring>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <random>
+
+std::unordered_set<std::string> blacklisted_imsis = {
+    "111111111111111",
+    "999999999999999"
+};
+
+struct Session {
+    std::string session_id;
+    time_t created_at;
+    std::string client_ip;
+    uint16_t client_port;
+};
+
+std::unordered_map<std::string, Session> active_sessions;
+
+std::string generate_session_id() {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_int_distribution<> dis(100000, 999999);
+    return "SID-" + std::to_string(dis(gen));
+}
 
 void handle_client(int sockfd, sockaddr_in client_addr, char* buffer, int bytes_received) {
     char client_ip[INET_ADDRSTRLEN];
@@ -20,13 +45,35 @@ void handle_client(int sockfd, sockaddr_in client_addr, char* buffer, int bytes_
         }
     }
 
-    if (is_valid && (imsi.length() == 15 || imsi.length() <= 16)) {
-        std::cout << "Received IMSI: " << imsi
-            << " from " << client_ip << ":" << client_port << std::endl;
+    if (!is_valid || imsi.length() != 15) {
+        std::cerr << "Invalid IMSI: " << imsi << " from " << client_ip << ":" << client_port << std::endl;
+        return;
+    }
 
+
+    if (blacklisted_imsis.find(imsi) != blacklisted_imsis.end()) {
+        std::cerr << "Blocked IMSI: " << imsi << " from " << client_ip << ":" << client_port << std::endl;
+        return;
     }
-    else {
-        std::cerr << "Invalid IMSI received: " << imsi
-            << " from " << client_ip << ":" << client_port << std::endl;
+
+
+    if (active_sessions.find(imsi) != active_sessions.end()) {
+        std::cout << "Session already exists for IMSI: " << imsi
+            << " (Session ID: " << active_sessions[imsi].session_id << ")\n";
+        return;
     }
+
+    Session new_session;
+    new_session.session_id = generate_session_id();
+    new_session.created_at = time(nullptr);
+    new_session.client_ip = client_ip;
+    new_session.client_port = client_port;
+
+    active_sessions[imsi] = new_session;
+
+    std::cout << "New session created:\n"
+        << "  IMSI: " << imsi << "\n"
+        << "  Session ID: " << new_session.session_id << "\n"
+        << "  Client: " << client_ip << ":" << client_port << "\n"
+        << "  Time: " << ctime(&new_session.created_at);
 }
