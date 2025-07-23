@@ -7,12 +7,12 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <random>
+#include <fstream>
+#include <ctime>
 
-
-std::unordered_set<std::string> blacklisted_imsis = {
-    "111111111111111", 
-    "999999999999999"
-};
+const std::string CDR_LOG_FILE = "cdr.log";
+std::unordered_set<std::string> blacklisted_imsis = { "111111111111111", "999999999999999" };
+std::unordered_map<std::string, Session> active_sessions;
 
 struct Session {
     std::string session_id;
@@ -21,8 +21,20 @@ struct Session {
     uint16_t client_port;
 };
 
-std::unordered_map<std::string, Session> active_sessions; 
+void log_cdr(const std::string& imsi, const std::string& action) {
+    std::ofstream cdr_file(CDR_LOG_FILE, std::ios::app);
+    if (!cdr_file.is_open()) {
+        std::cerr << "Error: Cannot open CDR log file!" << std::endl;
+        return;
+    }
 
+    time_t now = time(nullptr);
+    char timestamp[20];
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
+
+    cdr_file << timestamp << " | IMSI: " << imsi << " | Action: " << action << "\n";
+    cdr_file.close();
+}
 
 std::string generate_session_id() {
     static std::random_device rd;
@@ -31,18 +43,10 @@ std::string generate_session_id() {
     return "SID-" + std::to_string(dis(gen));
 }
 
-
 void send_response(int sockfd, sockaddr_in client_addr, const std::string& message) {
-    sendto(
-        sockfd,
-        message.c_str(),
-        message.size(),
-        0,
-        (struct sockaddr*)&client_addr,
-        sizeof(client_addr)
-    );
+    sendto(sockfd, message.c_str(), message.size(), 0,
+        (struct sockaddr*)&client_addr, sizeof(client_addr));
 }
-
 
 void handle_client(int sockfd, sockaddr_in client_addr, char* buffer, int bytes_received) {
     char client_ip[INET_ADDRSTRLEN];
@@ -63,21 +67,24 @@ void handle_client(int sockfd, sockaddr_in client_addr, char* buffer, int bytes_
     if (!is_valid || imsi.length() != 15) {
         std::string response = "rejected invalid_imsi";
         send_response(sockfd, client_addr, response);
-        std::cerr << "Rejected IMSI (invalid): " << imsi << " from " << client_ip << ":" << client_port << std::endl;
+        log_cdr(imsi, "rejected (invalid IMSI)");
+        std::cerr << "Rejected IMSI (invalid): " << imsi << std::endl;
         return;
     }
 
     if (blacklisted_imsis.find(imsi) != blacklisted_imsis.end()) {
         std::string response = "rejected blacklisted";
         send_response(sockfd, client_addr, response);
-        std::cerr << "Rejected IMSI (blacklisted): " << imsi << " from " << client_ip << ":" << client_port << std::endl;
+        log_cdr(imsi, "rejected (blacklisted)");
+        std::cerr << "Rejected IMSI (blacklisted): " << imsi << std::endl;
         return;
     }
 
     if (active_sessions.find(imsi) != active_sessions.end()) {
         std::string response = "rejected session_exists";
         send_response(sockfd, client_addr, response);
-        std::cerr << "Rejected IMSI (session exists): " << imsi << " from " << client_ip << ":" << client_port << std::endl;
+        log_cdr(imsi, "rejected (session exists)");
+        std::cerr << "Rejected IMSI (session exists): " << imsi << std::endl;
         return;
     }
 
@@ -91,11 +98,9 @@ void handle_client(int sockfd, sockaddr_in client_addr, char* buffer, int bytes_
 
     std::string response = "created " + new_session.session_id;
     send_response(sockfd, client_addr, response);
+    log_cdr(imsi, "created (session ID: " + new_session.session_id + ")");
 
-    std::cout << "New session created:\n"
-        << "  IMSI: " << imsi << "\n"
-        << "  Session ID: " << new_session.session_id << "\n"
-        << "  Client: " << client_ip << ":" << client_port << "\n"
-        << "  Time: " << ctime(&new_session.created_at);
+    std::cout << "New session for IMSI: " << imsi
+        << " (ID: " << new_session.session_id << ")\n";
 }
 
