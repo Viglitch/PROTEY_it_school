@@ -1,3 +1,16 @@
+#include <iostream>
+#include <thread>
+#include <cstring>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+void handle_client(int sockfd, sockaddr_in client_addr, char* buffer, int bytes_received) {
+    // Implement your client handling logic here
+    // This is just a placeholder to fix the compilation error
+    std::cout << "Handling client..." << std::endl;
+}
 int main() {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {

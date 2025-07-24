@@ -18,6 +18,11 @@
 
 using json = nlohmann::json;
 
+struct Session {
+    std::string session_id;
+    std::string created_at;
+};
+
 struct Config {
     int udp_port;
     int http_port;
