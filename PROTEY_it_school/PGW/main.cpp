@@ -7,8 +7,6 @@
 #include <arpa/inet.h>
 
 void handle_client(int sockfd, sockaddr_in client_addr, char* buffer, int bytes_received) {
-    // Implement your client handling logic here
-    // This is just a placeholder to fix the compilation error
     std::cout << "Handling client..." << std::endl;
 }
 int main() {

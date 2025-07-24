@@ -190,25 +190,3 @@ void check_subscriber(const std::string& imsi, const std::string& server_ip, int
 
     close(sockfd);
 }
-
-int main() {
-    init_logger("pgw_client.log");
-    log_message("PGW Client started");
-
-    std::string imsi = "250070000000001";
-    std::string udp_server_ip = "127.0.0.1";
-    int udp_port = 12345;
-
-    std::string http_server_ip = "127.0.0.1";
-    int http_port = 8080;
-
-    send_imsi(imsi, udp_server_ip, udp_port);
-    check_subscriber(imsi, http_server_ip, http_port);
-
-    log_message("PGW Client finished");
-    if (log_file.is_open()) {
-        log_file.close();
-    }
-
-    return 0;
-}
