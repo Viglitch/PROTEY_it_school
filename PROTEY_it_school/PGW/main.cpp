@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <chrono>
 #include <fstream>
-#include "pgw_server.cpp"
+#include "pgw_server.h"
 
 void handle_client(int sockfd, sockaddr_in client_addr, char* buffer, int bytes_received) {
     std::string imsi(buffer, bytes_received);

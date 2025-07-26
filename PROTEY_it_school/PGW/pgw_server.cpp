@@ -17,24 +17,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sstream>
+#include "pgw_server.h"
 
 using json = nlohmann::json;
 
-struct Session {
-    std::string session_id;
-    std::string created_at;
-};
+Session session;
 
-struct Config {
-    int udp_port;
-    int http_port;
-    int session_timeout_sec;
-    std::string cdr_file;
-    int graceful_shutdown_rate;
-    std::string log_file;
-    std::string log_level;
-    std::unordered_set<std::string> blacklist;
-} config;
+Config config;
+std::unordered_map<std::string, Session> active_sessions;
+std::mutex sessions_mutex;
+bool server_running = true;
 
 void load_config(const std::string& filename) {
     std::ifstream config_file(filename);
@@ -43,16 +35,15 @@ void load_config(const std::string& filename) {
     config.udp_port = j["udp_port"];
     config.http_port = j["http_port"];
     config.session_timeout_sec = j["session_timeout_sec"];
-    config.cdr_file = j["cdr_file"];
+    config.cdr_path = j["cdr_file"];
     config.graceful_shutdown_rate = j["graceful_shutdown_rate"];
     config.log_file = j["log_file"];
     config.log_level = j["log_level"];
-    config.blacklist = j["blacklist"];
+    config.blacklist.clear();
+    for (const auto& item : j["blacklist"]) {
+        config.blacklist.insert(item.get<std::string>());
+    }
 }
-
-std::unordered_map<std::string, Session> active_sessions;
-std::mutex sessions_mutex;
-bool server_running = true;
 
 void handle_udp_request(int sockfd, const std::string& imsi, const sockaddr_in& client_addr) {
     std::string response;

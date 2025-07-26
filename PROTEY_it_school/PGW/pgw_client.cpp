@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <ctime>
+#include "pgw_server.h"
 
 using json = nlohmann::json;
 
