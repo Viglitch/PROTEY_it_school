@@ -29,13 +29,71 @@ struct Config {
     int udp_port;
     int http_port;
     int session_timeout_sec;
+    std::string cdr_file;
+    int graceful_shutdown_rate;
+    std::string log_file;
+    std::string log_level;
     std::unordered_set<std::string> blacklist;
-    std::string cdr_path;
 } config;
+
+void load_config(const std::string& filename) {
+    std::ifstream config_file(filename);
+    json j;
+    config_file >> j;
+    config.udp_port = j["udp_port"];
+    config.http_port = j["http_port"];
+    config.session_timeout_sec = j["session_timeout_sec"];
+    config.cdr_file = j["cdr_file"];
+    config.graceful_shutdown_rate = j["graceful_shutdown_rate"];
+    config.log_file = j["log_file"];
+    config.log_level = j["log_level"];
+    config.blacklist = j["blacklist"];
+}
 
 std::unordered_map<std::string, Session> active_sessions;
 std::mutex sessions_mutex;
 bool server_running = true;
+
+void handle_udp_request(int sockfd, const std::string& imsi, const sockaddr_in& client_addr) {
+    std::string response;
+    std::string action;
+
+    std::lock_guard<std::mutex> lock(sessions_mutex);
+
+    if (config.blacklist.find(imsi) != config.blacklist.end()) {
+        response = "rejected";
+        action = "rejected (blacklisted)";
+    }
+    else if (active_sessions.find(imsi) != active_sessions.end()) {
+        response = "rejected";
+        action = "rejected (session exists)";
+    }
+    else {
+        std::string session_id = std::to_string(std::time(nullptr)) + "-" + imsi.substr(0, 4);
+
+        auto now = std::chrono::system_clock::now();
+        auto now_time = std::chrono::system_clock::to_time_t(now);
+        std::string timestamp = std::ctime(&now_time);
+        timestamp.erase(timestamp.find_last_not_of("\n") + 1);
+
+        Session new_session;
+        new_session.session_id = session_id;
+        new_session.created_at = timestamp;
+
+        active_sessions[imsi] = new_session;
+        response = "created";
+        action = "created";
+    }
+
+    socklen_t len = sizeof(client_addr);
+    sendto(sockfd, response.c_str(), response.size(), 0,
+        (struct sockaddr*)&client_addr, len);
+
+    std::ofstream cdr_file(config.cdr_path, std::ios::app);
+    if (cdr_file.is_open()) {
+        cdr_file << std::time(nullptr) << "," << imsi << "," << action << "\n";
+    }
+}
 
 void start_http_server() {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
