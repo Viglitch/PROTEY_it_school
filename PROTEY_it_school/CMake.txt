@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.10)
+project(FileRAIIDemo)
+
+set(CMAKE_CXX_STANDARD 17)
+
+add_library(FileRAII src/FileRAII.cpp include/FileRAII.h)
+
+add_executable(demo src/demo.cpp)
+target_link_libraries(demo FileRAII)
